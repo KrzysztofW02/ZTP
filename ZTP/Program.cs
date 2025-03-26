@@ -1,79 +1,73 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Drawing;
+using ZTP;
 
-namespace ZTP
+namespace ImageProcessingApp
 {
     class Program
     {
-        static void Main()
+        static void Main(string[] args)
         {
-            int[,] image = {
-            { 1, 2, 3, 4, 5 },
-            { 6, 7, 8, 9, 10 },
-            { 11, 12, 13, 14, 15 },
-            { 16, 17, 18, 19, 20 },
-            { 21, 22, 23, 24, 25 }
-            };
+            TestMatrixMultiplication();
+            TestImageProcessing();
 
-            int[,] kernel = {
-            { -1, -1, -1 },
-            { -1,  8, -1 },
-            { -1, -1, -1 }
-            };
-
-            int[,] result = ApplyConvolution(image, kernel);
-
-            PrintMatrix(result);
+            Console.WriteLine("Naciśnij dowolny klawisz, aby zakończyć.");
+            Console.ReadKey();
         }
 
-        static int[,] ApplyConvolution(int[,] input, int[,] kernel)
+        private static void TestMatrixMultiplication()
         {
-            int height = input.GetLength(0);
-            int width = input.GetLength(1);
-            int kSize = kernel.GetLength(0);
-            int offset = kSize / 2;
+            Console.WriteLine("\n--- Test: Mnożenie macierzy ---");
 
-            int[,] output = new int[height, width];
+            int largeRows = 3000;
+            int largeCols = 200;
+            int smallRows = 200;
+            int smallCols = 5;
 
-            for (int i = 0; i < height; i++)
-            {
-                for (int j = 0; j < width; j++)
-                {
-                    int sum = 0;
+            double[,] largeMatrix = GenerateMatrix(largeRows, largeCols);
+            double[,] smallMatrix = GenerateMatrix(smallRows, smallCols);
 
-                    for (int ki = 0; ki < kSize; ki++)
-                    {
-                        for (int kj = 0; kj < kSize; kj++)
-                        {
-                            int imgX = i + ki - offset;
-                            int imgY = j + kj - offset;
+            Stopwatch sw = Stopwatch.StartNew();
+            double[,] result = MatrixMultiplication.Multiply(largeMatrix, smallMatrix);
+            sw.Stop();
 
-                            if (imgX < 0 || imgX >= height || imgY < 0 || imgY >= width)
-                                continue;
-
-                            sum += input[imgX, imgY] * kernel[ki, kj];
-                        }
-                    }
-
-                    output[i, j] = sum;
-                }
-            }
-
-            return output;
+            Console.WriteLine($"Mnożenie macierzy zajęło: {sw.ElapsedMilliseconds} ms");
         }
 
-        static void PrintMatrix(int[,] matrix)
+        private static double[,] GenerateMatrix(int rows, int cols)
         {
-            int rows = matrix.GetLength(0);
-            int cols = matrix.GetLength(1);
-
+            double[,] matrix = new double[rows, cols];
+            Random rnd = new Random();
             for (int i = 0; i < rows; i++)
-            {
                 for (int j = 0; j < cols; j++)
-                {
-                    Console.Write(matrix[i, j].ToString("D2") + " ");
-                }
-                Console.WriteLine();
+                    matrix[i, j] = rnd.NextDouble() * 10;
+            return matrix;
+        }
+
+        private static void TestImageProcessing()
+        {
+            Console.WriteLine("\n--- Test: Przetwarzanie obrazów w folderze ---");
+
+            string inputFolder = "Images";  
+            string outputFolder = "output"; 
+
+            if (!Directory.Exists(inputFolder))
+            {
+                Console.WriteLine($"Nie znaleziono folderu wejściowego: {inputFolder}");
+                return;
             }
+
+            if (!Directory.Exists(outputFolder))
+            {
+                Directory.CreateDirectory(outputFolder);
+            }
+
+            Stopwatch sw = Stopwatch.StartNew();
+            ImageProcessor.ProcessImages(inputFolder, outputFolder);
+            sw.Stop();
+
+            Console.WriteLine($"Przetwarzanie obrazów zakończone w: {sw.ElapsedMilliseconds} ms");
         }
     }
 }
