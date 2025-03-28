@@ -9,6 +9,7 @@ namespace ImageProcessingApp
     {
         static void Main(string[] args)
         {
+            //GC.Collect();
             TestMatrixMultiplication();
             TestImageProcessing();
 
@@ -35,10 +36,10 @@ namespace ImageProcessingApp
             Console.WriteLine($"Mnożenie macierzy zajęło: {sw.ElapsedMilliseconds} ms");
         }
 
+        private static readonly Random rnd = new Random();
         private static double[,] GenerateMatrix(int rows, int cols)
         {
             double[,] matrix = new double[rows, cols];
-            Random rnd = new Random();
             for (int i = 0; i < rows; i++)
                 for (int j = 0; j < cols; j++)
                     matrix[i, j] = rnd.NextDouble() * 10;

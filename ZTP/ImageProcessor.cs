@@ -2,6 +2,8 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Buffers;
 
 namespace ImageProcessingApp
 {
@@ -70,7 +72,7 @@ namespace ImageProcessingApp
                 {
                     for (int x = 1; x < width - 1; x++)
                     {
-                        int[] newColor = new int[3] { 0, 0, 0 };
+                        int newR = 0, newG = 0, newB = 0;
 
                         for (int ky = -1; ky <= 1; ky++)
                         {
@@ -80,21 +82,20 @@ namespace ImageProcessingApp
                                 int pixelY = y + ky;
                                 byte* p = srcPtr + pixelY * stride + pixelX * bytesPerPixel;
                                 int kernelValue = kernel[ky + 1, kx + 1];
-                                newColor[0] += p[0] * kernelValue;
-                                newColor[1] += p[1] * kernelValue;
-                                newColor[2] += p[2] * kernelValue;
+                                newR += p[0] * kernelValue;
+                                newG += p[1] * kernelValue;
+                                newB += p[2] * kernelValue;
                             }
                         }
 
-                        for (int c = 0; c < 3; c++)
-                        {
-                            newColor[c] = Math.Min(255, Math.Max(0, newColor[c]));
-                        }
+                        newR = Math.Min(255, Math.Max(0, newR));
+                        newG = Math.Min(255, Math.Max(0, newG));
+                        newB = Math.Min(255, Math.Max(0, newB));
 
                         byte* dstPixel = dstPtr + y * stride + x * bytesPerPixel;
-                        dstPixel[0] = (byte)newColor[0];
-                        dstPixel[1] = (byte)newColor[1];
-                        dstPixel[2] = (byte)newColor[2];
+                        dstPixel[0] = (byte)newR;
+                        dstPixel[1] = (byte)newG;
+                        dstPixel[2] = (byte)newB;
                         if (bytesPerPixel == 4)
                         {
                             dstPixel[3] = 255;
@@ -118,7 +119,7 @@ namespace ImageProcessingApp
 
             int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
             int byteCount = srcData.Stride * bitmap.Height;
-            byte[] pixelBuffer = new byte[byteCount];
+            byte[] pixelBuffer = ArrayPool<byte>.Shared.Rent(byteCount);
             System.Runtime.InteropServices.Marshal.Copy(srcData.Scan0, pixelBuffer, 0, byteCount);
             bitmap.UnlockBits(srcData);
 
@@ -181,7 +182,7 @@ namespace ImageProcessingApp
             Bitmap resultBitmap = new Bitmap(width, height, bitmap.PixelFormat);
             BitmapData dstData = resultBitmap.LockBits(rect, ImageLockMode.WriteOnly, resultBitmap.PixelFormat);
 
-            byte[] resultBuffer = new byte[byteCount];
+            byte[] resultBuffer = ArrayPool<byte>.Shared.Rent(byteCount);
             for (int y = 0; y < height; y++)
             {
                 int rowOffset = y * stride;
@@ -197,6 +198,9 @@ namespace ImageProcessingApp
             System.Runtime.InteropServices.Marshal.Copy(resultBuffer, 0, dstData.Scan0, byteCount);
             resultBitmap.UnlockBits(dstData);
             bitmap.Dispose();
+
+            ArrayPool<byte>.Shared.Return(pixelBuffer);
+            ArrayPool<byte>.Shared.Return(resultBuffer);
 
             return resultBitmap;
         }
