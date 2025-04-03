@@ -4,6 +4,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Buffers;
+using System.Numerics;
 
 namespace ImageProcessingApp
 {
@@ -23,7 +24,8 @@ namespace ImageProcessingApp
             }
 
             string[] imageFiles = Directory.GetFiles(inputFolder, "*.*", SearchOption.TopDirectoryOnly);
-            foreach (var file in imageFiles)
+
+            Parallel.ForEach(imageFiles, file =>
             {
                 try
                 {
@@ -39,7 +41,7 @@ namespace ImageProcessingApp
                 {
                     Console.WriteLine($"Błąd przetwarzania {file}: {ex.Message}");
                 }
-            }
+            });
         }
 
         public static unsafe Bitmap ProcessImage(string photoFile)
@@ -205,5 +207,97 @@ namespace ImageProcessingApp
             return resultBitmap;
         }
 
-    }
+        public static Bitmap ProcessImageSIMD(string photoFile)
+        {
+            Bitmap bitmap = new Bitmap(photoFile);
+            Bitmap result = new Bitmap(bitmap.Width, bitmap.Height, bitmap.PixelFormat);
+            Rectangle rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+            BitmapData srcData = bitmap.LockBits(rect, ImageLockMode.ReadOnly, bitmap.PixelFormat);
+            BitmapData dstData = result.LockBits(rect, ImageLockMode.WriteOnly, result.PixelFormat);
+
+            int bytesPerPixel = Image.GetPixelFormatSize(bitmap.PixelFormat) / 8;
+            int width = bitmap.Width;
+            int height = bitmap.Height;
+            int stride = srcData.Stride;
+            int byteCount = stride * height;
+
+            byte[] pixelBuffer = new byte[byteCount];
+            Marshal.Copy(srcData.Scan0, pixelBuffer, 0, byteCount);
+            byte[] resultBuffer = new byte[byteCount];
+
+            float[] redChannel = new float[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                int rowOffset = y * stride;
+                for (int x = 0; x < width; x++)
+                {
+                    int pos = rowOffset + x * bytesPerPixel;
+                    redChannel[y * width + x] = pixelBuffer[pos];
+                }
+            }
+
+            float[,] kernel = new float[3, 3]
+            {
+                { 0f, -1f, 0f },
+                { -1f, 4f, -1f },
+                { 0f, -1f, 0f }
+            };
+            int kCenter = 1; 
+
+            int vectorSize = Vector<float>.Count;
+            float[] outputRed = new float[width * height];
+
+            for (int y = kCenter; y < height - kCenter; y++)
+            {
+                for (int x = kCenter; x <= width - kCenter - vectorSize; x += vectorSize)
+                {
+                    Vector<float> sum = Vector<float>.Zero;
+                    for (int ky = -kCenter; ky <= kCenter; ky++)
+                    {
+                        int srcRow = (y + ky) * width;
+                        for (int kx = -kCenter; kx <= kCenter; kx++)
+                        {
+                            float kVal = kernel[ky + kCenter, kx + kCenter];
+                            int index = srcRow + (x + kx);
+                            Vector<float> vec = new Vector<float>(redChannel, index);
+                            sum += vec * new Vector<float>(kVal);
+                        }
+                    }
+                    sum.CopyTo(outputRed, y * width + x);
+                }
+            }
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (y < kCenter || y >= height - kCenter || x < kCenter || x >= width - kCenter)
+                        outputRed[y * width + x] = redChannel[y * width + x];
+                }
+            }
+
+            for (int y = 0; y < height; y++)
+            {
+                int rowOffset = y * stride;
+                for (int x = 0; x < width; x++)
+                {
+                    int pos = rowOffset + x * bytesPerPixel;
+                    int redVal = (int)Math.Min(255, Math.Max(0, outputRed[y * width + x]));
+                    resultBuffer[pos] = (byte)redVal;
+                    resultBuffer[pos + 1] = pixelBuffer[pos + 1];
+                    resultBuffer[pos + 2] = pixelBuffer[pos + 2];
+                    if (bytesPerPixel == 4)
+                        resultBuffer[pos + 3] = pixelBuffer[pos + 3];
+                }
+            }
+
+            Marshal.Copy(resultBuffer, 0, dstData.Scan0, byteCount);
+            bitmap.UnlockBits(srcData);
+            result.UnlockBits(dstData);
+            bitmap.Dispose();
+
+            return result;
+        }
+
+        }
 }

@@ -20,7 +20,7 @@ namespace ZTP
 
             double[,] result = new double[largeRows, smallCols];
 
-            for (int i = 0; i < largeRows; i++)
+            Parallel.For(0, largeRows, i =>
             {
                 for (int j = 0; j < smallCols; j++)
                 {
@@ -31,7 +31,7 @@ namespace ZTP
                     }
                     result[i, j] = sum;
                 }
-            }
+            });
 
             return result;
         }
