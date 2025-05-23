@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ImageProcessorService": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

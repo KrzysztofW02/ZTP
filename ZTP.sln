@@ -1,9 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35707.178 d17.12
+VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZTP", "ZTP\ZTP.csproj", "{B67228E5-E5E1-4B2D-A98F-D80443746A69}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageProcessorService", "ImageProcessorService\ImageProcessorService.csproj", "{2A371363-0B59-4EEC-B74B-150679F9D69D}"
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{C4045CB6-DEDC-41EC-8ABE-8F210B640F9F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{788F2AF2-2611-47BA-9CFE-17A9CEE3BE88}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +21,18 @@ Global
 		{B67228E5-E5E1-4B2D-A98F-D80443746A69}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B67228E5-E5E1-4B2D-A98F-D80443746A69}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B67228E5-E5E1-4B2D-A98F-D80443746A69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A371363-0B59-4EEC-B74B-150679F9D69D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A371363-0B59-4EEC-B74B-150679F9D69D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A371363-0B59-4EEC-B74B-150679F9D69D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A371363-0B59-4EEC-B74B-150679F9D69D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4045CB6-DEDC-41EC-8ABE-8F210B640F9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4045CB6-DEDC-41EC-8ABE-8F210B640F9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4045CB6-DEDC-41EC-8ABE-8F210B640F9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4045CB6-DEDC-41EC-8ABE-8F210B640F9F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{788F2AF2-2611-47BA-9CFE-17A9CEE3BE88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{788F2AF2-2611-47BA-9CFE-17A9CEE3BE88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{788F2AF2-2611-47BA-9CFE-17A9CEE3BE88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{788F2AF2-2611-47BA-9CFE-17A9CEE3BE88}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

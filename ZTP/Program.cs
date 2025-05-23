@@ -1,74 +1,47 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Drawing;
-using ZTP;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using RabbitMQ.Client;
+using Shared;
 
-namespace ImageProcessingApp
+namespace ZTP
 {
     class Program
     {
         static void Main(string[] args)
         {
-            //GC.Collect();
-            TestMatrixMultiplication();
-            TestImageProcessing();
+            RunMatrixTest();
 
-            Console.WriteLine("Naciśnij dowolny klawisz, aby zakończyć.");
-            Console.ReadKey();
+            var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ__HOSTNAME") ?? "localhost";
+            var publisher = new ImagePublisher(rabbitHost);
+            publisher.PublishAll("Images");
+
+            Console.WriteLine("All jobs published. Exiting.");
         }
 
-        private static void TestMatrixMultiplication()
+        private static void RunMatrixTest()
         {
             Console.WriteLine("\n--- Test: Mnożenie macierzy ---");
+            var rnd = new Random();
+            var A = GenerateMatrix(3000, 200, rnd);
+            var B = GenerateMatrix(200, 5, rnd);
 
-            int largeRows = 3000;
-            int largeCols = 200;
-            int smallRows = 200;
-            int smallCols = 5;
-
-            double[,] largeMatrix = GenerateMatrix(largeRows, largeCols);
-            double[,] smallMatrix = GenerateMatrix(smallRows, smallCols);
-
-            Stopwatch sw = Stopwatch.StartNew();
-            double[,] result = MatrixMultiplication.Multiply(largeMatrix, smallMatrix);
+            var sw = Stopwatch.StartNew();
+            var C = MatrixMultiplication.Multiply(A, B);
             sw.Stop();
 
             Console.WriteLine($"Mnożenie macierzy zajęło: {sw.ElapsedMilliseconds} ms");
         }
 
-        private static readonly Random rnd = new Random();
-        private static double[,] GenerateMatrix(int rows, int cols)
+        private static double[,] GenerateMatrix(int r, int c, Random rnd)
         {
-            double[,] matrix = new double[rows, cols];
-            for (int i = 0; i < rows; i++)
-                for (int j = 0; j < cols; j++)
-                    matrix[i, j] = rnd.NextDouble() * 10;
-            return matrix;
-        }
-
-        private static void TestImageProcessing()
-        {
-            Console.WriteLine("\n--- Test: Przetwarzanie obrazów w folderze ---");
-
-            string inputFolder = "Images";  
-            string outputFolder = "output"; 
-
-            if (!Directory.Exists(inputFolder))
-            {
-                Console.WriteLine($"Nie znaleziono folderu wejściowego: {inputFolder}");
-                return;
-            }
-
-            if (!Directory.Exists(outputFolder))
-            {
-                Directory.CreateDirectory(outputFolder);
-            }
-
-            Stopwatch sw = Stopwatch.StartNew();
-            ImageProcessor.ProcessImages(inputFolder, outputFolder);
-            sw.Stop();
-
-            Console.WriteLine($"Przetwarzanie obrazów zakończone w: {sw.ElapsedMilliseconds} ms");
+            var m = new double[r, c];
+            for (int i = 0; i < r; i++)
+                for (int j = 0; j < c; j++)
+                    m[i, j] = rnd.NextDouble() * 10;
+            return m;
         }
     }
 }

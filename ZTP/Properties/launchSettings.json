@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ZTP": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

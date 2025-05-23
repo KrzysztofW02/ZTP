@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Buffers;
 using System.Numerics;
 
-namespace ImageProcessingApp
+namespace ImageProcessorService
 {
     public static class ImageProcessor
     {
@@ -242,7 +242,7 @@ namespace ImageProcessingApp
                 { -1f, 4f, -1f },
                 { 0f, -1f, 0f }
             };
-            int kCenter = 1; 
+            int kCenter = 1;
 
             int vectorSize = Vector<float>.Count;
             float[] outputRed = new float[width * height];
@@ -298,6 +298,5 @@ namespace ImageProcessingApp
 
             return result;
         }
-
-        }
+    }
 }
