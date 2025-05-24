@@ -1,0 +1,35 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ztp-rabbit
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  ztp:
+    build:
+      context: .
+      dockerfile: ZTP/Dockerfile
+    image: ztp-service:latest
+    ports:
+      - "5000:80"
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ__HOSTNAME: rabbitmq
+
+  imageprocessor:
+    build:
+      context: .
+      dockerfile: ImageProcessorService/Dockerfile
+    image: image-processor-service:latest
+    ports:
+      - "5001:80"
+    depends_on:
+      - ztp
+      - rabbitmq
+    environment:
+      RABBITMQ__HOSTNAME: rabbitmq
