@@ -18,7 +18,7 @@ namespace ZTP
             {
                 HostName = host
             };
-            _connection = factory.CreateConnection();   
+            _connection = ConnectionHelper.CreateConnectionWithRetry(factory);
             _channel = _connection.CreateModel();        
             _channel.ExchangeDeclare(
                 exchange: ExchangeName,
@@ -31,7 +31,7 @@ namespace ZTP
         {
             if (!Directory.Exists(inputFolder))
             {
-                Console.WriteLine($"Nie znaleziono folderu: {inputFolder}");
+                Console.WriteLine($"Folder: {inputFolder} not found");
                 return;
             }
 

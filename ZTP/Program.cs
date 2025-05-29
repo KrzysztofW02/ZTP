@@ -15,15 +15,16 @@ namespace ZTP
             RunMatrixTest();
 
             var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ__HOSTNAME") ?? "localhost";
+            var imagesPath = Environment.GetEnvironmentVariable("IMAGE_FOLDER");
             var publisher = new ImagePublisher(rabbitHost);
-            publisher.PublishAll("Images");
+            publisher.PublishAll(imagesPath);
 
             Console.WriteLine("All jobs published. Exiting.");
         }
 
         private static void RunMatrixTest()
         {
-            Console.WriteLine("\n--- Test: Mnożenie macierzy ---");
+            Console.WriteLine("\n--- Test: Matrix Multiplication ---");
             var rnd = new Random();
             var A = GenerateMatrix(3000, 200, rnd);
             var B = GenerateMatrix(200, 5, rnd);
@@ -32,7 +33,7 @@ namespace ZTP
             var C = MatrixMultiplication.Multiply(A, B);
             sw.Stop();
 
-            Console.WriteLine($"Mnożenie macierzy zajęło: {sw.ElapsedMilliseconds} ms");
+            Console.WriteLine($"Matrix multiplication took: {sw.ElapsedMilliseconds} ms");
         }
 
         private static double[,] GenerateMatrix(int r, int c, Random rnd)

@@ -8,6 +8,11 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   ztp:
     build:
@@ -17,9 +22,13 @@ services:
     ports:
       - "5000:80"
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
     environment:
       RABBITMQ__HOSTNAME: rabbitmq
+      IMAGE_FOLDER: /Images
+    volumes:
+      - ./Images:/Images
 
   imageprocessor:
     build:
@@ -29,7 +38,12 @@ services:
     ports:
       - "5001:80"
     depends_on:
-      - ztp
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      ztp:
+        condition: service_started
     environment:
       RABBITMQ__HOSTNAME: rabbitmq
+      IMAGE_FOLDER: /Images
+    volumes:
+      - ./Images:/Images  
