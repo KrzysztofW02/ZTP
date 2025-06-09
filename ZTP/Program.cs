@@ -15,7 +15,7 @@ namespace ZTP
             RunMatrixTest();
 
             var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ__HOSTNAME") ?? "localhost";
-            var imagesPath = Environment.GetEnvironmentVariable("IMAGE_FOLDER");
+            var imagesPath = Environment.GetEnvironmentVariable("IMAGE_FOLDER") ?? throw new Exception("There is no variable for image folder");
             var publisher = new ImagePublisher(rabbitHost);
             publisher.PublishAll(imagesPath);
 

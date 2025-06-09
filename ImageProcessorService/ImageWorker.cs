@@ -2,61 +2,66 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Text;
+using System.Text.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using System.Text;
+using Shared;
 
 namespace ImageProcessorService
 {
     public class ImageWorker : IDisposable
     {
+        private const string ExchangeName = "image_jobs";
         private const string JobQueue = "image_jobs";
         private const string ResultQueue = "image_results";
 
-        private readonly IConnection _conn;
+        private readonly IConnection _connection;
         private readonly IModel _channel;
+        private readonly string _baseFolder;
 
-        public ImageWorker(string host)
+        public ImageWorker(string host, string baseFolder)
         {
+            _baseFolder = baseFolder;
             var factory = new ConnectionFactory { HostName = host };
-            _conn = factory.CreateConnection();
-            _channel = _conn.CreateModel();
-            _channel.QueueDeclare(JobQueue, durable: true, exclusive: false, autoDelete: false, arguments: null);
-            _channel.QueueDeclare(ResultQueue, durable: true, exclusive: false, autoDelete: false, arguments: null);
+            _connection = ConnectionHelper.CreateConnectionWithRetry(factory);
+            _channel = _connection.CreateModel();
+
+            _channel.ExchangeDeclare(ExchangeName, ExchangeType.Fanout, durable: true);
+            _channel.QueueDeclare(JobQueue, durable: true, exclusive: false, autoDelete: false);
+            _channel.QueueBind(JobQueue, ExchangeName, routingKey: string.Empty);
+            _channel.QueueDeclare(ResultQueue, durable: true, exclusive: false, autoDelete: false);
         }
 
         public void Run()
         {
             var consumer = new EventingBasicConsumer(_channel);
-            consumer.Received += (ch, ea) =>
-            {
-                string folderPath = Encoding.UTF8.GetString(ea.Body.ToArray());
-                Console.WriteLine($"[Worker] Received: {folderPath}");
-
-                string outputFolder = Path.Combine(folderPath, "processed");
-                ImageProcessor.ProcessImages(folderPath, outputFolder);
-
-                var resultMsg = $"Processed: {Path.GetFileName(folderPath)}";
-                var body = Encoding.UTF8.GetBytes(resultMsg);
-                var props = _channel.CreateBasicProperties();
-                props.Persistent = true;
-                _channel.BasicPublish("", ResultQueue, props, body);
-                Console.WriteLine($"[Worker] Sent result: {resultMsg}");
-
-                _channel.BasicAck(ea.DeliveryTag, multiple: false);
-            };
-
+            consumer.Received += OnMessage;
             _channel.BasicQos(0, 1, false);
             _channel.BasicConsume(JobQueue, autoAck: false, consumer: consumer);
 
-            Console.WriteLine("[Worker] Waiting for jobs. Press Enter to exit.");
-            Console.ReadLine();
+            Console.WriteLine("[Worker] Waiting for images. Ctrl+C to exit.");
+            System.Threading.Thread.Sleep(Timeout.Infinite);
         }
+        private void OnMessage(object sender, BasicDeliverEventArgs ea)
+        {
+            var fileName = Encoding.UTF8.GetString(ea.Body.ToArray());
+            Console.WriteLine($"[Worker] Received filename: {fileName}");
 
+            var inputPath = Path.Combine(_baseFolder, fileName);
+            var outputDir = Path.Combine(_baseFolder, "processed");
+            Directory.CreateDirectory(outputDir);
+            var outputPath = Path.Combine(outputDir, fileName);
+
+            using var proc = ImageProcessor.ProcessImage(inputPath);
+            proc.Save(outputPath, ImageFormat.Jpeg);
+
+            Console.WriteLine($"[Worker] Saved processed: {outputPath}");
+        }
         public void Dispose()
         {
             _channel.Close();
-            _conn.Close();
+            _connection.Close();
         }
     }
 }

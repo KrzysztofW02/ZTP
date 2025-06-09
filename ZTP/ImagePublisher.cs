@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using RabbitMQ.Client;
 using Shared;   
@@ -37,13 +38,9 @@ namespace ZTP
 
             foreach (var file in Directory.EnumerateFiles(inputFolder, "*.jpg"))
             {
-                var job = new ImageDTO
-                {
-                    FileName = Path.GetFileName(file),
-                    ImageBytes = File.ReadAllBytes(file)
-                };
+                var fileName = Path.GetFileName(file);
+                byte[] body = Encoding.UTF8.GetBytes(fileName);
 
-                byte[] body = JsonSerializer.SerializeToUtf8Bytes(job);
                 IBasicProperties props = _channel.CreateBasicProperties();
                 props.Persistent = true;
 
@@ -54,7 +51,7 @@ namespace ZTP
                     body: body
                 );
 
-                Console.WriteLine($"Published: {job.FileName}");
+                Console.WriteLine($"Published filename: {fileName}");
             }
         }
 

@@ -4,7 +4,11 @@
     {
         static void Main(string[] args)
         {
-            using var service = new ImageWorker("localhost");
+            AppContext.SetSwitch("System.Drawing.EnableUnixSupport", true);
+
+            var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ__HOSTNAME") ?? "localhost";
+            var imagesPath = Environment.GetEnvironmentVariable("IMAGE_FOLDER") ?? throw new Exception("There is no variable for image folder");
+            using var service = new ImageWorker(rabbitHost, imagesPath);
             service.Run();
         }
     }
