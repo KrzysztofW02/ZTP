@@ -48,16 +48,36 @@ namespace ImageProcessorService
             var fileName = Encoding.UTF8.GetString(ea.Body.ToArray());
             Console.WriteLine($"[Worker] Received filename: {fileName}");
 
-            var inputPath = Path.Combine(_baseFolder, fileName);
-            var outputDir = Path.Combine(_baseFolder, "processed");
-            Directory.CreateDirectory(outputDir);
-            var outputPath = Path.Combine(outputDir, fileName);
+            try
+            {
+                var inputPath = Path.Combine(_baseFolder, fileName);
+                var outputDir = Path.Combine(_baseFolder, "processed");
+                Directory.CreateDirectory(outputDir);
+                var outputPath = Path.Combine(outputDir, fileName);
 
-            using var proc = ImageProcessor.ProcessImage(inputPath);
-            proc.Save(outputPath, ImageFormat.Jpeg);
+                using var proc = ImageProcessor.ProcessImage(inputPath);
+                proc.Save(outputPath, ImageFormat.Jpeg);
+                Console.WriteLine($"[Worker] Saved processed: {outputPath}");
+                _channel.BasicAck(ea.DeliveryTag, multiple: false);
 
-            Console.WriteLine($"[Worker] Saved processed: {outputPath}");
+                var resultMsg = fileName;
+                var body = Encoding.UTF8.GetBytes(resultMsg);
+                var props = _channel.CreateBasicProperties();
+                props.Persistent = true;
+                _channel.BasicPublish(
+                    exchange: "",
+                    routingKey: ResultQueue,
+                    basicProperties: props,
+                    body: body
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Worker] ERROR: {ex.Message}");
+                _channel.BasicNack(ea.DeliveryTag, multiple: false, requeue: true);
+            }
         }
+
         public void Dispose()
         {
             _channel.Close();

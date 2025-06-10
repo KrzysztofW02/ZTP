@@ -28,31 +28,27 @@ namespace ZTP
             );
         }
 
-        public void PublishAll(string inputFolder)
+        public int PublishAll(string inputFolder)
         {
             if (!Directory.Exists(inputFolder))
             {
-                Console.WriteLine($"Folder: {inputFolder} not found");
-                return;
+                Console.WriteLine($"Folder not found: {inputFolder}");
+                return 0;
             }
 
+            int count = 0;
             foreach (var file in Directory.EnumerateFiles(inputFolder, "*.jpg"))
             {
                 var fileName = Path.GetFileName(file);
-                byte[] body = Encoding.UTF8.GetBytes(fileName);
-
-                IBasicProperties props = _channel.CreateBasicProperties();
+                var body = Encoding.UTF8.GetBytes(fileName);
+                var props = _channel.CreateBasicProperties();
                 props.Persistent = true;
 
-                _channel.BasicPublish(
-                    exchange: ExchangeName,
-                    routingKey: "",
-                    basicProperties: props,
-                    body: body
-                );
-
+                _channel.BasicPublish(ExchangeName, "", props, body);
                 Console.WriteLine($"Published filename: {fileName}");
+                count++;
             }
+            return count;
         }
 
         public void Dispose()

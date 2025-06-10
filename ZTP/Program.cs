@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using System.Text;
 using Shared;
 
 namespace ZTP
@@ -15,11 +17,37 @@ namespace ZTP
             RunMatrixTest();
 
             var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ__HOSTNAME") ?? "localhost";
-            var imagesPath = Environment.GetEnvironmentVariable("IMAGE_FOLDER") ?? throw new Exception("There is no variable for image folder");
-            var publisher = new ImagePublisher(rabbitHost);
-            publisher.PublishAll(imagesPath);
+            var imagesPath = Environment.GetEnvironmentVariable("IMAGE_FOLDER")
+                              ?? throw new Exception("IMAGE_FOLDER not set");
+            using var publisher = new ImagePublisher(rabbitHost);
 
-            Console.WriteLine("All jobs published. Exiting.");
+            int total = publisher.PublishAll(imagesPath);
+            Console.WriteLine($"Published {total} images, awaiting processing results...");
+
+            var factory = new ConnectionFactory { HostName = rabbitHost };
+            using var conn = factory.CreateConnection();
+            using var chan = conn.CreateModel();
+            chan.QueueDeclare("image_results", durable: true, exclusive: false, autoDelete: false);
+
+            int processed = 0;
+            var consumer = new EventingBasicConsumer(chan);
+            consumer.Received += (ch, ea) =>
+            {
+                var fileName = Encoding.UTF8.GetString(ea.Body.ToArray());
+                processed++;
+                Console.WriteLine($"Result {processed}/{total}: {fileName}");
+                chan.BasicAck(ea.DeliveryTag, multiple: false);
+
+                if (processed >= total)
+                {
+                    Console.WriteLine("All images processed. Exiting.");
+                    Environment.Exit(0);
+                }
+            };
+            chan.BasicConsume("image_results", autoAck: false, consumer: consumer);
+
+            Console.WriteLine("Waiting for processing results...");
+            Console.ReadLine();
         }
 
         private static void RunMatrixTest()
