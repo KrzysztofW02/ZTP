@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text.Json;
+using System.Text;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using System.Text;
-using Shared;
 
 namespace ZTP
 {
@@ -19,10 +16,10 @@ namespace ZTP
             var rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ__HOSTNAME") ?? "localhost";
             var imagesPath = Environment.GetEnvironmentVariable("IMAGE_FOLDER")
                               ?? throw new Exception("IMAGE_FOLDER not set");
-            using var publisher = new ImagePublisher(rabbitHost);
 
+            using var publisher = new ImagePublisher(rabbitHost);
             int total = publisher.PublishAll(imagesPath);
-            Console.WriteLine($"Published {total} images, awaiting processing results...");
+            Console.WriteLine($"Published {total} jobs (CPU + GPU), awaiting processing results...");
 
             var factory = new ConnectionFactory { HostName = rabbitHost };
             using var conn = factory.CreateConnection();

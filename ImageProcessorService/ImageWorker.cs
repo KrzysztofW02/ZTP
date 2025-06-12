@@ -3,7 +3,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
-using System.Text.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Shared;
@@ -12,8 +11,8 @@ namespace ImageProcessorService
 {
     public class ImageWorker : IDisposable
     {
-        private const string ExchangeName = "image_jobs";
-        private const string JobQueue = "image_jobs";
+        private const string ExchangeName = "cpu_jobs";         
+        private const string JobQueue = "cpu_jobs";              
         private const string ResultQueue = "image_results";
 
         private readonly IConnection _connection;
@@ -37,51 +36,49 @@ namespace ImageProcessorService
         {
             var consumer = new EventingBasicConsumer(_channel);
             consumer.Received += OnMessage;
-            _channel.BasicQos(0, 1, false);
+            _channel.BasicQos(0, 1, false); 
             _channel.BasicConsume(JobQueue, autoAck: false, consumer: consumer);
 
-            Console.WriteLine("[Worker] Waiting for images. Ctrl+C to exit.");
+            Console.WriteLine("[CPU Worker] Waiting for images. Ctrl+C to exit.");
             System.Threading.Thread.Sleep(Timeout.Infinite);
         }
+
         private void OnMessage(object sender, BasicDeliverEventArgs ea)
         {
             var fileName = Encoding.UTF8.GetString(ea.Body.ToArray());
-            Console.WriteLine($"[Worker] Received filename: {fileName}");
+            Console.WriteLine($"[CPU Worker] Received filename: {fileName}");
 
             try
             {
                 var inputPath = Path.Combine(_baseFolder, fileName);
-                var outputDir = Path.Combine(_baseFolder, "processed");
+                var outputDir = Path.Combine(_baseFolder, "processed_cpu");
                 Directory.CreateDirectory(outputDir);
                 var outputPath = Path.Combine(outputDir, fileName);
 
-                using var proc = ImageProcessor.ProcessImage(inputPath);
-                proc.Save(outputPath, ImageFormat.Jpeg);
-                Console.WriteLine($"[Worker] Saved processed: {outputPath}");
-                _channel.BasicAck(ea.DeliveryTag, multiple: false);
+                using var processed = ImageProcessor.ProcessImage(inputPath); 
+                processed.Save(outputPath, ImageFormat.Jpeg);
 
-                var resultMsg = fileName;
+                Console.WriteLine($"[CPU Worker] Saved processed: {outputPath}");
+
+                var resultMsg = $"CPU::{fileName}";
                 var body = Encoding.UTF8.GetBytes(resultMsg);
                 var props = _channel.CreateBasicProperties();
                 props.Persistent = true;
-                _channel.BasicPublish(
-                    exchange: "",
-                    routingKey: ResultQueue,
-                    basicProperties: props,
-                    body: body
-                );
+
+                _channel.BasicPublish("", ResultQueue, props, body);
+                _channel.BasicAck(ea.DeliveryTag, multiple: false);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Worker] ERROR: {ex.Message}");
+                Console.WriteLine($"[CPU Worker] ERROR: {ex.Message}");
                 _channel.BasicNack(ea.DeliveryTag, multiple: false, requeue: true);
             }
         }
 
         public void Dispose()
         {
-            _channel.Close();
-            _connection.Close();
+            _channel?.Close();
+            _connection?.Close();
         }
     }
 }

@@ -1,31 +1,26 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using System.Text.Json;
 using RabbitMQ.Client;
-using Shared;   
 
 namespace ZTP
 {
     public class ImagePublisher : IDisposable
     {
-        private const string ExchangeName = "image_jobs";
+        private const string CpuExchange = "cpu_jobs";
+        private const string GpuExchange = "gpu_jobs";
+
         private readonly IConnection _connection;
         private readonly IModel _channel;
 
         public ImagePublisher(string host)
         {
-            var factory = new ConnectionFactory
-            {
-                HostName = host
-            };
-            _connection = ConnectionHelper.CreateConnectionWithRetry(factory);
-            _channel = _connection.CreateModel();        
-            _channel.ExchangeDeclare(
-                exchange: ExchangeName,
-                type: ExchangeType.Fanout,
-                durable: true
-            );
+            var factory = new ConnectionFactory { HostName = host };
+            _connection = factory.CreateConnection();
+            _channel = _connection.CreateModel();
+
+            _channel.ExchangeDeclare(CpuExchange, ExchangeType.Fanout, durable: true);
+            _channel.ExchangeDeclare(GpuExchange, ExchangeType.Fanout, durable: true);
         }
 
         public int PublishAll(string inputFolder)
@@ -44,9 +39,11 @@ namespace ZTP
                 var props = _channel.CreateBasicProperties();
                 props.Persistent = true;
 
-                _channel.BasicPublish(ExchangeName, "", props, body);
-                Console.WriteLine($"Published filename: {fileName}");
-                count++;
+                _channel.BasicPublish(CpuExchange, "", props, body);
+                _channel.BasicPublish(GpuExchange, "", props, body);
+
+                Console.WriteLine($"Published to CPU & GPU: {fileName}");
+                count += 2;
             }
             return count;
         }
@@ -55,8 +52,6 @@ namespace ZTP
         {
             _channel?.Close();
             _connection?.Close();
-            _channel?.Dispose();
-            _connection?.Dispose();
         }
     }
 }
